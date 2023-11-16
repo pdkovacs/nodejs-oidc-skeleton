@@ -1,0 +1,17 @@
+extends layout.pug
+
+block content
+  div#page-content
+    div.row.px-3.gy-5
+      div.col
+        div.py-5
+          button.btn.btn-link(hx-get="/authorization-tests", hx-target="#page-content" hx-push-url="true") Authorization tests
+    div.row.px-3
+      div.col
+        div
+          form(hx-post="/logout")
+            button.btn.btn-outline-secondary Log out
+    p
+      div.row
+        div.col
+          include includes/footer-and-scripts

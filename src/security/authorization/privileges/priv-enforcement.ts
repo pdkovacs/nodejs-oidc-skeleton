@@ -18,7 +18,7 @@ const requiredPrivilegesByEndPoints: RequiredPrivilegesByEndPoints = Object.free
 			Privilege.SAY_HELLO
 		]
 	},
-	"^/user/[^/]+/hello$": {
+	"^/hello/other$": {
 		POST: [
 			Privilege.SAY_HELLO,
 			Privilege.SAY_HELLO_TO_USER

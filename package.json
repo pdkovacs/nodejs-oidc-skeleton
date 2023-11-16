@@ -16,6 +16,7 @@
 		"helmet": "^7.1.0",
 		"lodash": "^4.17.15",
 		"openid-client": "^5.4.3",
+		"pug": "^3.0.2",
 		"source-map-support": "^0.5.10",
 		"winston": "^3.2.1"
 	},
@@ -30,6 +31,7 @@
 		"@types/jasmine": "^5.1.2",
 		"@types/lodash": "^4.14.136",
 		"@types/node": "^20.9.0",
+		"@types/pug": "^2.0.9",
 		"@types/rimraf": "^2.0.2",
 		"@typescript-eslint/eslint-plugin": "^6.5.0",
 		"concurrently": "^6.0.2",
@@ -48,16 +50,9 @@
 	},
 	"scripts": {
 		"lint": "eslint '{src,integration-tests,scripts}/**/*.ts'",
-		"add-version": "bash deploy/add-version-to-build.sh",
 		"compile": "rm -rf build && tsc",
-		"watch:tests": "npm run compile && concurrently --kill-others \"tsc --watch\" \"cross-env ICON_REPO_CONFIG_PROFILE=dev nodemon --watch build run-tests.js\"",
-		"import": "npm run compile && node build/scripts/import.js",
-		"dev:import": "cross-env ICON_REPO_CONFIG_PROFILE=dev cross-env ICON_DATA_CREATE_NEW=always npm run import",
-		"dev": "npm run compile && concurrently --kill-others \"tsc --watch\" \"cross-env ICON_REPO_CONFIG_PROFILE=dev nodemon --watch build build/src/index.js\"",
-		"dev:oidc": "npm run compile && concurrently --kill-others \"tsc --watch\" \"cross-env ICON_REPO_CONFIG_PROFILE=devoidc-wcontext nodemon --watch build build/src/index.js\"",
-		"test": "npm run lint && npm run compile && cross-env ICON_REPO_CONFIG_PROFILE=dev cross-env IGNORE_CONFIG_FILE_CHANGE=true node run-tests.js",
-		"build:backend": "rm -rf build && npm run test",
-		"db:createTables": "npm run compile && node -e 'require(\"./build/scripts/create-schema\").default();'"
+		"watch:views": "nodemon -e pug,css --watch src/views --exec \"rsync -av --del src/views build/src/\"",
+		"dev": "npm run compile && cp -a src/views build/src/ && concurrently --kill-others \"tsc --watch\" \"nodemon --watch build build/src/index.js\""
 	},
 	"author": "peter.dunay.kovacs@gmail.com",
 	"license": "MIT"

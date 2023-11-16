@@ -12,6 +12,10 @@ import session, { type SessionData } from "express-session";
 import _ from "lodash";
 import { createAuthenticatedUser, storeAuthentication } from "./security/authorization/privileges/authenticated-user.js";
 import { hasRequiredPrivileges } from "./security/authorization/privileges/priv-enforcement.js";
+import path from "node:path";
+import pug from "pug";
+
+const dirname = new URL(".", import.meta.url).pathname;
 
 let logger: Logger;
 
@@ -27,7 +31,29 @@ const logServerStart = (server: AppServer): void => {
 	logger.log("info", "The server is listening at http://%s:%s", host, port);
 };
 
-const setupAuthRoutes = (router: express.Router, oidcHandler: OidcHandler): void => {
+const setupPage = (router: express.Router): void => {
+	router.get("/favicon.ico", (req, res) => {
+		res.sendStatus(201);
+	});
+
+	router.get("/", (req, res) => {
+		const logger = getLogger("route:///");
+		logger.debug("rendering 'unauth'...");
+		if (_.isNil(req.session.authentication)) {
+			res.render("unauth");
+			return;
+		}
+		logger.debug("rendering 'index'...");
+		res.render("index", {
+			user: {
+				name: req.session.authentication?.username
+			}
+		}
+		);
+	});
+};
+
+const setupAuthRoutes = (router: express.Router, oidcHandler: OidcHandler, loginUrl: string, logoutUrl: string): void => {
 	router.get("/login", (req, res) => {
 		const logger = getLogger("route:///login");
 		try {
@@ -44,7 +70,7 @@ const setupAuthRoutes = (router: express.Router, oidcHandler: OidcHandler): void
 		const codeVerifier = req.session?.codeVerifier;
 		if (_.isNil(codeVerifier)) {
 			logger.error("Missing code-verifier");
-			res.sendStatus(401);
+			res.redirect(loginUrl);
 			return;
 		}
 		oidcHandler.getTokenSet(req, codeVerifier)
@@ -60,19 +86,23 @@ const setupAuthRoutes = (router: express.Router, oidcHandler: OidcHandler): void
 			.then(
 				authnUser => {
 					storeAuthentication(req.session as SessionData, authnUser);
-					res.sendStatus(200);
+					res.redirect("/");
 				}
 			)
 			.catch(err => {
 				logger.error("error while getting token-set: %o", err);
-				res.sendStatus(401);
+				const template = pug.compile("span.error error while getting token-set: #{errorMessage}");
+				const markup = template({ errorMessage: err.message });
+				res.send(markup);
 			});
 	});
 
 	router.use((req, res, next) => {
+		const logger = getLogger("oidc://authentication-check");
 		const authentication = req.session.authentication;
+		logger.debug("checking authentication: %o", authentication);
 		if (_.isNil(authentication)) {
-			res.redirect("/login");
+			res.redirect(loginUrl);
 			return;
 		}
 		hasRequiredPrivileges(req)
@@ -83,16 +113,42 @@ const setupAuthRoutes = (router: express.Router, oidcHandler: OidcHandler): void
 						return;
 					}
 					logger.debug("not enough privileges");
-					res.sendStatus(403);
+					const template = pug.compileFile(path.join(dirname, "views/includes/authorization-error.pug"));
+					const markup = template();
+					res.send(markup);
 				}
 			).catch(error => {
 				logger.error("error while evaluating authentication information: %o", error);
 				res.sendStatus(401);
 			});
 	});
+
+	router.post("/logout", (req, res) => {
+		const logger = getLogger("route:///logout");
+		try {
+			delete req.session.authentication;
+			if (!_.isNil(logoutUrl)) {
+				res.setHeader("HX-Redirect", logoutUrl).end();
+			}
+		} catch (error) {
+			logger.error("failed to process logout: %o", error);
+			res.send(pug.compile("span.error failed to logout")());
+		}
+	});
 };
 
 const setupRoutes = (router: express.Router): void => {
+	router.get("/authorization-tests", (req, res) => {
+		const template = pug.compileFile(path.join(dirname, "views/includes/page-content/authorization-tests.pug"));
+		const markup = template({
+			user:
+				{
+					name: req.session.authentication?.username
+				}
+		});
+		res.send(markup);
+	});
+
 	router.post("/hello", (req, res) => {
 		const logger = getLogger("route:///login");
 		const name: string = req.query?.name as string;
@@ -100,9 +156,10 @@ const setupRoutes = (router: express.Router): void => {
 		res.send(`Hello, ${name}`);
 	});
 
-	router.post("/user/:username/hello", (req, res) => {
-		const logger = getLogger("route:///user/:username/hello");
-		const name: string = req.params?.username;
+	router.post("/hello/other", (req, res) => {
+		const logger = getLogger("route:///hello/other");
+		logger.debug("body: %o", req.body);
+		const name: string = req.body.buddy;
 		logger.debug("incoming request: %s", name);
 		res.send(`Hello, ${name}`);
 	});
@@ -113,6 +170,9 @@ const startServer = async (appConfig: AppConfig): Promise<AppServer> => {
 	logger = getLogger("app");
 
 	const app = express();
+	app.use(express.static(path.join(dirname, "views/assets")));
+	app.set("view engine", "pug");
+	app.set("views", path.join(dirname, "views"));
 
 	app.use(session({
 		secret: "my-secret", // a secret string used to sign the session ID cookie
@@ -124,7 +184,10 @@ const startServer = async (appConfig: AppConfig): Promise<AppServer> => {
 	app.use(helmet({
 		contentSecurityPolicy: {
 			useDefaults: false,
-			directives
+			directives: {
+				...directives,
+				"script-src-elem": ["'self'", "unpkg.com", "cdn.jsdelivr.net"]
+			}
 		}
 	}));
 	app.set("trust proxy", true);
@@ -134,12 +197,14 @@ const startServer = async (appConfig: AppConfig): Promise<AppServer> => {
 
 	const router: express.Router = express.Router();
 
+	setupPage(router);
+
 	const oidcHandler: OidcHandler = await createOidcHandler({
 		clientSecret: appConfig.oidcClientSecret,
 		metaDataUrl: appConfig.oidcTokenIssuer,
 		callbackUrl: appConfig.oidcCallbackUrl
 	});
-	setupAuthRoutes(router, oidcHandler);
+	setupAuthRoutes(router, oidcHandler, "/login", appConfig.oidcLogoutUrl);
 
 	setupRoutes(router);
 	app.use(router);
