@@ -44,5 +44,5 @@ module.exports = {
 			version: "detect"
 		}
 	},
-	"ignorePatterns": [".eslintrc.js"],
+	"ignorePatterns": [".eslintrc.cjs", "jasmine-reporters.js", "run-tests.js"],
 };

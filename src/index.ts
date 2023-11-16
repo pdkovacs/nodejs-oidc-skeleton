@@ -8,15 +8,10 @@ import { type AddressInfo } from "node:net";
 import helmet from "helmet";
 import { type AppConfig, readConfiguration } from "./configuration.js";
 import { type OidcHandler, createOidcHandler } from "./security/authentication/oidc.js";
-import { randomBytes } from "node:crypto";
-import session from "express-session";
+import session, { type SessionData } from "express-session";
 import _ from "lodash";
-
-declare module "express-session" {
-	export interface SessionData {
-		codeVerifier: string
-	}
-}
+import { createAuthenticatedUser, storeAuthentication } from "./security/authorization/privileges/authenticated-user.js";
+import { hasRequiredPrivileges } from "./security/authorization/privileges/priv-enforcement.js";
 
 let logger: Logger;
 
@@ -34,17 +29,18 @@ const logServerStart = (server: AppServer): void => {
 
 const setupAuthRoutes = (router: express.Router, oidcHandler: OidcHandler): void => {
 	router.get("/login", (req, res) => {
-		const logger = getLogger("route/login");
-		const name: string = req.query?.name as string;
-		logger.debug("incoming request: %s", name);
-		const codeVerifier = randomBytes(64).toString("hex");
-		req.session.codeVerifier = codeVerifier;
-		const auhtrZUrl = oidcHandler.getAuthorizationUrl(codeVerifier);
-		res.redirect(auhtrZUrl);
+		const logger = getLogger("route:///login");
+		try {
+			const auhtRUrl = oidcHandler.getAuthorizationUrl(req);
+			res.redirect(auhtRUrl);
+		} catch (error) {
+			logger.error("failed to process login: %o", error);
+			res.sendStatus(401);
+		}
 	});
 
 	router.get("/oidc-callback", (req, res): void => {
-		const logger = getLogger("route/oidc-callback");
+		const logger = getLogger("route:///oidc-callback");
 		const codeVerifier = req.session?.codeVerifier;
 		if (_.isNil(codeVerifier)) {
 			logger.error("Missing code-verifier");
@@ -52,17 +48,61 @@ const setupAuthRoutes = (router: express.Router, oidcHandler: OidcHandler): void
 			return;
 		}
 		oidcHandler.getTokenSet(req, codeVerifier)
+			.then(
+				async tokenSet => {
+					if (_.isNil(tokenSet.access_token)) {
+						throw new Error("no access_token in token-set");
+					}
+					const userInfo = await oidcHandler.getUserInfo(tokenSet.access_token);
+					return await createAuthenticatedUser(userInfo.preferred_username as string, userInfo.groups as string[]);
+				}
+			)
+			.then(
+				authnUser => {
+					storeAuthentication(req.session as SessionData, authnUser);
+					res.sendStatus(200);
+				}
+			)
 			.catch(err => {
 				logger.error("error while getting token-set: %o", err);
+				res.sendStatus(401);
+			});
+	});
+
+	router.use((req, res, next) => {
+		const authentication = req.session.authentication;
+		if (_.isNil(authentication)) {
+			res.redirect("/login");
+			return;
+		}
+		hasRequiredPrivileges(req)
+			.then(
+				has => {
+					if (has) {
+						next();
+						return;
+					}
+					logger.debug("not enough privileges");
+					res.sendStatus(403);
+				}
+			).catch(error => {
+				logger.error("error while evaluating authentication information: %o", error);
 				res.sendStatus(401);
 			});
 	});
 };
 
 const setupRoutes = (router: express.Router): void => {
-	router.get("/hello", (req, res) => {
-		const logger = getLogger("route/login");
+	router.post("/hello", (req, res) => {
+		const logger = getLogger("route:///login");
 		const name: string = req.query?.name as string;
+		logger.debug("incoming request: %s", name);
+		res.send(`Hello, ${name}`);
+	});
+
+	router.post("/user/:username/hello", (req, res) => {
+		const logger = getLogger("route:///user/:username/hello");
+		const name: string = req.params?.username;
 		logger.debug("incoming request: %s", name);
 		res.send(`Hello, ${name}`);
 	});
@@ -77,7 +117,7 @@ const startServer = async (appConfig: AppConfig): Promise<AppServer> => {
 	app.use(session({
 		secret: "my-secret", // a secret string used to sign the session ID cookie
 		resave: false, // don't save session if unmodified
-		saveUninitialized: false // don't create session until something stored
+		saveUninitialized: false // don't create session until something stored,
 	}));
 
 	const directives = helmet.contentSecurityPolicy.getDefaultDirectives();

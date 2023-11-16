@@ -2,6 +2,7 @@ import { type IncomingMessage } from "http";
 import { Issuer, type TokenSet, generators } from "openid-client";
 
 import { getLogger } from "../../logger.js";
+import { randomBytes } from "crypto";
 
 interface OidcHandlerParams {
 	readonly metaDataUrl: string
@@ -10,7 +11,7 @@ interface OidcHandlerParams {
 }
 
 export interface OidcHandler {
-	readonly getAuthorizationUrl: (codeVerifier: string) => string
+	readonly getAuthorizationUrl: (req: Express.Request) => string
 	readonly getTokenSet: (req: IncomingMessage, codeVerifier: string) => Promise<TokenSet>
 	readonly getUserInfo: (accessToken: string) => Promise<any>
 	readonly refreshToken: (refreshToken: TokenSet) => Promise<TokenSet>
@@ -29,8 +30,14 @@ export const createOidcHandler = async (params: OidcHandlerParams): Promise<Oidc
 		// token_endpoint_auth_method (default "client_secret_basic")
 	}); // => Client
 
-	const getAuthorizationUrl = (codeVerifier: string): string => {
-		const codeChallenge = generators.codeChallenge(codeVerifier);
+	/**
+   * <ol>
+   * <li>generates a code-verifier
+   * <li>sets it on the request object <code>req</code>
+   * <li>uses it to generate th URL
+   */
+	const getAuthorizationUrl = (req: Express.Request): string => {
+		const codeChallenge = generators.codeChallenge(createCodeVerifier(req));
 
 		return client.authorizationUrl({
 			scope: "openid email profile",
@@ -53,6 +60,7 @@ export const createOidcHandler = async (params: OidcHandlerParams): Promise<Oidc
 		const logger = getLogger("oidc/getUserInfo");
 		const userinfo = await client.userinfo(accessToken);
 		logger.debug("userinfo %o", userinfo);
+		return userinfo;
 	};
 
 	const refreshToken = async (refreshToken: TokenSet): Promise<TokenSet> => {
@@ -61,6 +69,12 @@ export const createOidcHandler = async (params: OidcHandlerParams): Promise<Oidc
 		logger.debug("refreshed and validated tokens %o", tokenSet);
 		logger.debug("refreshed ID Token claims %o", tokenSet.claims());
 		return tokenSet;
+	};
+
+	const createCodeVerifier = (req: Express.Request): string => {
+		const codeVerifier = randomBytes(64).toString("hex");
+		req.session.codeVerifier = codeVerifier;
+		return codeVerifier;
 	};
 
 	return {
