@@ -4,4 +4,7 @@
 /build/
 /docker/dist/
 /log
+.terraform
+terraform.tfstate
+terraform.tfstate.backup
 

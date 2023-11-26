@@ -1,11 +1,11 @@
-import { type SessionData } from "express-session";
+import { type Session } from "express-session";
 import _ from "lodash";
 import { type Privilege, privilegesByRoles } from "./authorization/privileges/roles-privileges.js";
 
 declare module "express-session" {
-	export interface SessionData {
+	export interface Session {
 		codeVerifier: string
-		authentication: AuthenticatedUser
+		authentication?: AuthenticatedUser
 	}
 }
 
@@ -35,9 +35,8 @@ export class AuthenticatedUser {
 	}
 }
 
-export const storeAuthentication = (session: SessionData, authentication: AuthenticatedUser): void => {
+export const storeAuthentication = (session: Session, authentication: AuthenticatedUser): void => {
 	session.authentication = authentication;
 };
 
-export const getAuthentication: (session: any) => AuthenticatedUser =
-session => session.authentication;
+export const getAuthentication: (session: Session) => AuthenticatedUser | undefined = session => session.authentication;

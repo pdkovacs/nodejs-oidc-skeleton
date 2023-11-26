@@ -8,7 +8,7 @@ import { type AddressInfo } from "node:net";
 import helmet from "helmet";
 import { type AppConfig, readConfiguration } from "./configuration.js";
 import { type OidcHandler, createOidcHandler } from "./security/authentication/oidc.js";
-import session, { type SessionData } from "express-session";
+import session, { type Session } from "express-session";
 import _ from "lodash";
 import { createAuthenticatedUser, storeAuthentication } from "./security/authenticated-user.js";
 import { hasRequiredPrivileges } from "./security/authorization/privileges/priv-enforcement.js";
@@ -32,7 +32,7 @@ const logServerStart = (server: AppServer): void => {
 };
 
 const setupPage = (router: express.Router): void => {
-	router.get("/favicon.ico", (req, res) => {
+	router.get("/favicon.ico", (_, res) => {
 		res.sendStatus(201);
 	});
 
@@ -85,7 +85,7 @@ const setupAuthRoutes = (router: express.Router, oidcHandler: OidcHandler, login
 			)
 			.then(
 				authnUser => {
-					storeAuthentication(req.session as SessionData, authnUser);
+					storeAuthentication(req.session as Session, authnUser);
 					res.redirect("/");
 				}
 			)
@@ -200,6 +200,7 @@ const startServer = async (appConfig: AppConfig): Promise<AppServer> => {
 	setupPage(router);
 
 	const oidcHandler: OidcHandler = await createOidcHandler({
+		clientId: appConfig.oidcClientId,
 		clientSecret: appConfig.oidcClientSecret,
 		metaDataUrl: appConfig.oidcTokenIssuer,
 		callbackUrl: appConfig.oidcCallbackUrl

@@ -1,0 +1,10 @@
+version: '3'
+
+tasks:
+  apply-keycloak-config:
+    cmds:
+    - cd ./deployment/dev/keycloak/ && ./tf.sh apply
+  destroy-keycloak-config:
+    cmds:
+    - cd ./deployment/dev/keycloak/ && ./tf.sh destroy
+
