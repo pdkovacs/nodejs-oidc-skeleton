@@ -1,7 +1,7 @@
 import type * as express from "express";
 import { Privilege } from "./roles-privileges.js";
 import _ from "lodash";
-import { getAuthentication } from "./authenticated-user.js";
+import { getAuthentication } from "../../authenticated-user.js";
 
 type PathSelector = string;
 type RoleName = string;

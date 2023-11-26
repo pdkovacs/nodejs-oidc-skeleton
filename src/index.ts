@@ -10,7 +10,7 @@ import { type AppConfig, readConfiguration } from "./configuration.js";
 import { type OidcHandler, createOidcHandler } from "./security/authentication/oidc.js";
 import session, { type SessionData } from "express-session";
 import _ from "lodash";
-import { createAuthenticatedUser, storeAuthentication } from "./security/authorization/privileges/authenticated-user.js";
+import { createAuthenticatedUser, storeAuthentication } from "./security/authenticated-user.js";
 import { hasRequiredPrivileges } from "./security/authorization/privileges/priv-enforcement.js";
 import path from "node:path";
 import pug from "pug";

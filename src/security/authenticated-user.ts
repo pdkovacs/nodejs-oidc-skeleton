@@ -1,6 +1,6 @@
 import { type SessionData } from "express-session";
 import _ from "lodash";
-import { type Privilege, privilegesByRoles } from "./roles-privileges.js";
+import { type Privilege, privilegesByRoles } from "./authorization/privileges/roles-privileges.js";
 
 declare module "express-session" {
 	export interface SessionData {
