@@ -8,12 +8,12 @@ import { type AddressInfo } from "node:net";
 import helmet from "helmet";
 import { type AppConfig, readConfiguration } from "./configuration.js";
 import { type OidcHandler, createOidcHandler } from "./security/authentication/oidc.js";
-import session, { type Session } from "express-session";
+import session from "express-session";
 import _ from "lodash";
-import { createAuthenticatedUser, storeAuthentication } from "./security/authenticated-user.js";
 import { hasRequiredPrivileges } from "./security/authorization/privileges/priv-enforcement.js";
 import path from "node:path";
 import pug from "pug";
+import { setupCallbackRoute } from "./security/authentication/oidc-express.js";
 
 const dirname = new URL(".", import.meta.url).pathname;
 
@@ -53,7 +53,7 @@ const setupPage = (router: express.Router): void => {
 	});
 };
 
-const setupAuthRoutes = (router: express.Router, oidcHandler: OidcHandler, loginUrl: string, logoutUrl: string): void => {
+const setupAuthRoutes = async (router: express.Router, oidcHandler: OidcHandler, loginUrl: string, logoutUrl: string): Promise<void> => {
 	router.get("/login", (req, res) => {
 		const logger = getLogger("route:///login");
 		try {
@@ -65,37 +65,7 @@ const setupAuthRoutes = (router: express.Router, oidcHandler: OidcHandler, login
 		}
 	});
 
-	router.get("/oidc-callback", (req, res): void => {
-		const logger = getLogger("route:///oidc-callback");
-		const codeVerifier = req.session?.codeVerifier;
-		if (_.isNil(codeVerifier)) {
-			logger.error("Missing code-verifier");
-			res.redirect(loginUrl);
-			return;
-		}
-		oidcHandler.getTokenSet(req, codeVerifier)
-			.then(
-				async tokenSet => {
-					if (_.isNil(tokenSet.access_token)) {
-						throw new Error("no access_token in token-set");
-					}
-					const userInfo = await oidcHandler.getUserInfo(tokenSet.access_token);
-					return await createAuthenticatedUser(userInfo.preferred_username as string, userInfo.groups as string[]);
-				}
-			)
-			.then(
-				authnUser => {
-					storeAuthentication(req.session as Session, authnUser);
-					res.redirect("/");
-				}
-			)
-			.catch(err => {
-				logger.error("error while getting token-set: %o", err);
-				const template = pug.compile("span.error error while getting token-set: #{errorMessage}");
-				const markup = template({ errorMessage: err.message });
-				res.send(markup);
-			});
-	});
+	await setupCallbackRoute(router, loginUrl, oidcHandler);
 
 	router.use((req, res, next) => {
 		const logger = getLogger("oidc://authentication-check");
@@ -205,7 +175,7 @@ const startServer = async (appConfig: AppConfig): Promise<AppServer> => {
 		metaDataUrl: appConfig.oidcTokenIssuer,
 		callbackUrl: appConfig.oidcCallbackUrl
 	});
-	setupAuthRoutes(router, oidcHandler, "/login", appConfig.oidcLogoutUrl);
+	await setupAuthRoutes(router, oidcHandler, "/login", appConfig.oidcLogoutUrl);
 
 	setupRoutes(router);
 	app.use(router);
