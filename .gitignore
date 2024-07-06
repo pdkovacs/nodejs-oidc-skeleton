@@ -2,8 +2,9 @@
 .DS_Store
 /node_modules/
 /build/
-/docker/dist/
+/dist/
 /log
+.task
 .terraform
 terraform.tfstate
 terraform.tfstate.backup

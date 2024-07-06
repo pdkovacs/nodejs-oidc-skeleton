@@ -7,4 +7,20 @@ tasks:
   destroy-keycloak-config:
     cmds:
     - cd ./deployment/dev/keycloak/ && ./tf.sh destroy
-
+  build:
+    cmds:
+    - npm run compile
+    - bun build --target node --external="$(jq -r '.dependencies|keys[]' package.json)" ./build/src/index.js --outfile ./dist/bundle.js
+    sources:
+    - src/**/*.js
+    generates:
+    - dist/bundle.js
+  build-docker:
+    deps: [build]
+    cmds:
+    - |
+      __project_root={{.ROOT_DIR}}
+      docker_dir=$__project_root/deployment/docker
+      cp -a dist/bundle.js $docker_dir/
+      cp $__project_root/package.json $__project_root/package-lock.json $docker_dir/
+      docker build -t nodejs-oidc-skeleton $docker_dir

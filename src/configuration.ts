@@ -12,9 +12,19 @@ const defaults = {
 export type AppConfig = typeof defaults;
 
 export const readConfiguration = async (): Promise<AppConfig> => {
+	const logLevel = process.env.NOIDCSKE_LOG_LEVEL ?? defaults.logLevel;
+	const tokenIssuer = process.env.NOIDCSKE_TOKEN_ISSUER ?? defaults.oidcTokenIssuer;
+	const clientId = process.env.NOIDCSKE_CLIENT_ID ?? defaults.oidcClientId;
 	const clientSecret = process.env.NOIDCSKE_CLIENT_SECRET ?? defaults.oidcClientSecret;
+	const callbackUrl = process.env.NOIDCSKE_CALLBACK_URL ?? defaults.oidcCallbackUrl;
+	const logoutUrl = process.env.NOIDCSKE_LOGOUT_URL ?? defaults.oidcLogoutUrl;
 	return {
 		...defaults,
-		oidcClientSecret: clientSecret
+		logLevel,
+		oidcTokenIssuer: tokenIssuer,
+		oidcClientId: clientId,
+		oidcClientSecret: clientSecret,
+		oidcCallbackUrl: callbackUrl,
+		oidcLogoutUrl: logoutUrl
 	};
 };
