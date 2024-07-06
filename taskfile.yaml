@@ -1,5 +1,8 @@
 version: '3'
 
+vars:
+  APP_NAME: nodejs-oidc-skeleton
+
 tasks:
   apply-keycloak-config:
     cmds:
