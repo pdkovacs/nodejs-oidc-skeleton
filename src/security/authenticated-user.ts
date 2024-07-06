@@ -1,6 +1,7 @@
 import { type Session } from "express-session";
 import _ from "lodash";
 import { type Privilege, privilegesByRoles } from "./authorization/privileges/roles-privileges.js";
+import { getLogger } from "../logger.js";
 
 declare module "express-session" {
 	export interface Session {
@@ -10,6 +11,8 @@ declare module "express-session" {
 }
 
 export const createAuthenticatedUser = async (username: string, roles: string[]): Promise<AuthenticatedUser> => {
+	const logger = getLogger("createAuthenticatedUser");
+	logger.debug("BEGIN");
 	const privileges: Privilege[] = roles.reduce<Privilege[]>(
 		(acc, role) => {
 			if (!_.isNil(privilegesByRoles[role])) {
@@ -19,6 +22,7 @@ export const createAuthenticatedUser = async (username: string, roles: string[])
 		},
 		[]
 	);
+	logger.debug("creating AuthenticatedUser with username=%s and privileges=%o", username, privileges);
 	return new AuthenticatedUser(username, privileges);
 };
 

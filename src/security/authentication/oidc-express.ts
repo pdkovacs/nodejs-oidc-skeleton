@@ -9,24 +9,31 @@ import pug from "pug";
 export const setupCallbackRoute = async (router: express.Router, loginUrl: string, oidcHandler: OidcHandler): Promise<void> => {
 	router.get("/oidc-callback", (req, res): void => {
 		const logger = getLogger("route:///oidc-callback");
+		logger.debug("BEGIN");
 		const codeVerifier = req.session?.codeVerifier;
 		if (_.isNil(codeVerifier)) {
 			logger.error("Missing code-verifier");
 			res.redirect(loginUrl);
 			return;
 		}
+		logger.debug("Getting token-set...");
 		oidcHandler.getTokenSet(req, codeVerifier)
 			.then(
 				async tokenSet => {
+					logger.debug("Got some token-set");
 					if (_.isNil(tokenSet.access_token)) {
+						logger.debug("no access_token in token-set");
 						throw new Error("no access_token in token-set");
 					}
 					const userInfo = await oidcHandler.getUserInfo(tokenSet.access_token);
-					return await createAuthenticatedUser(userInfo.preferred_username as string, userInfo.groups as string[]);
+					const claims = tokenSet.claims();
+					logger.debug("Got user-info and claims: %o", claims);
+					return await createAuthenticatedUser((userInfo.preferred_username ?? userInfo.email) as string, (userInfo.groups ?? claims["cognito:groups"]) as string[]);
 				}
 			)
 			.then(
 				authnUser => {
+					logger.debug("Got authenitcated-user");
 					storeAuthentication(req.session as Session, authnUser);
 					res.redirect("/");
 				}

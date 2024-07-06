@@ -19,7 +19,11 @@ export interface OidcHandler {
 }
 
 export const createOidcHandler = async (params: OidcHandlerParams): Promise<OidcHandler> => {
+	const logger = getLogger("oidc/createOidcHandler");
+
 	const { metaDataUrl, clientId, clientSecret, callbackUrl } = params;
+
+	logger.info("Performing discovery using %s...", metaDataUrl);
 	const issuer = await Issuer.discover(metaDataUrl);
 
 	const client = new issuer.Client({
@@ -50,6 +54,7 @@ export const createOidcHandler = async (params: OidcHandlerParams): Promise<Oidc
 
 	const getTokenSet = async (req: IncomingMessage, codeVerifier: string): Promise<TokenSet> => {
 		const logger = getLogger("oidc/getTokenSet");
+		logger.debug("BEGIN");
 		const params = client.callbackParams(req);
 		const tokenSet = await client.callback(callbackUrl, params, { code_verifier: codeVerifier });
 		logger.debug("received and validated tokens %o", tokenSet);

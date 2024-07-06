@@ -2,6 +2,7 @@ version: '3'
 
 vars:
   APP_NAME: nodejs-oidc-skeleton
+  APP_VERSION: 0.0.1
 
 tasks:
   apply-keycloak-config:
@@ -16,7 +17,7 @@ tasks:
     - bun build --target node --external="$(jq -r '.dependencies|keys[]' package.json)" ./build/src/index.js --outfile ./dist/bundle.js
     - cp -a ./src/views ./dist/
     sources:
-    - src/**/*.js
+    - src/**/*
     generates:
     - dist/bundle.js
   build-docker:
@@ -32,10 +33,11 @@ tasks:
     generates:
       - ./deployment/docker
   aws-tag-push-to-ecr:
+    deps: [build-docker]
     cmds:
     - |
       . ${HOME}/.my-aws-config
       aws ecr get-login-password --profile $AWS_PROFILE --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
       # aws --profile $AWS_PROFILE ecr create-repository --registry-id ${AWS_ACCOUNT_ID} --repository-name {{.APP_NAME}}
-      docker tag {{.APP_NAME}} ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/{{.APP_NAME}}
-      docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/{{.APP_NAME}}
+      docker tag {{.APP_NAME}} ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/{{.APP_NAME}}:{{.APP_VERSION}}
+      docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/{{.APP_NAME}}:{{.APP_VERSION}}

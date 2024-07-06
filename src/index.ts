@@ -183,7 +183,7 @@ const startServer = async (appConfig: AppConfig): Promise<AppServer> => {
 	return await new Promise(resolve => {
 		const httpServer = app.listen(
 			appConfig.serverPort,
-			appConfig.serverHostname,
+			appConfig.serverHost,
 			() => {
 				resolve({
 					address: () => httpServer.address() as AddressInfo,
