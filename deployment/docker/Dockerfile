@@ -12,6 +12,7 @@ WORKDIR /usr/src/app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 COPY bundle.js ./
+COPY views ./views
 
 EXPOSE 8080
 

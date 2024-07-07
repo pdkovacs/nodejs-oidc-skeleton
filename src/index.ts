@@ -15,7 +15,7 @@ import path from "node:path";
 import pug from "pug";
 import { setupCallbackRoute } from "./security/authentication/oidc-express.js";
 
-const dirname = new URL(".", import.meta.url).pathname;
+const appdir = new URL(".", import.meta.url).pathname;
 
 let logger: Logger;
 
@@ -38,8 +38,8 @@ const setupPage = (router: express.Router): void => {
 
 	router.get("/", (req, res) => {
 		const logger = getLogger("route:///");
-		logger.debug("rendering 'unauth'...");
 		if (_.isNil(req.session.authentication)) {
+			logger.debug("rendering 'unauth'...");
 			res.render("unauth");
 			return;
 		}
@@ -83,7 +83,7 @@ const setupAuthRoutes = async (router: express.Router, oidcHandler: OidcHandler,
 						return;
 					}
 					logger.debug("not enough privileges");
-					const template = pug.compileFile(path.join(dirname, "views/includes/authorization-error.pug"));
+					const template = pug.compileFile(path.join(appdir, "views/includes/authorization-error.pug"));
 					const markup = template();
 					res.send(markup);
 				}
@@ -109,7 +109,7 @@ const setupAuthRoutes = async (router: express.Router, oidcHandler: OidcHandler,
 
 const setupRoutes = (router: express.Router): void => {
 	router.get("/authorization-tests", (req, res) => {
-		const template = pug.compileFile(path.join(dirname, "views/includes/page-content/authorization-tests.pug"));
+		const template = pug.compileFile(path.join(appdir, "views/includes/page-content/authorization-tests.pug"));
 		const markup = template({
 			user:
 				{
@@ -140,9 +140,9 @@ const startServer = async (appConfig: AppConfig): Promise<AppServer> => {
 	logger = getLogger("app");
 
 	const app = express();
-	app.use(express.static(path.join(dirname, "views/assets")));
+	app.use(express.static(path.join(appdir, "views/assets")));
 	app.set("view engine", "pug");
-	app.set("views", path.join(dirname, "views"));
+	app.set("views", path.join(appdir, "views"));
 
 	app.use(session({
 		secret: "my-secret", // a secret string used to sign the session ID cookie

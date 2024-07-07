@@ -11,6 +11,7 @@ tasks:
     cmds:
     - npm run compile
     - bun build --target node --external="$(jq -r '.dependencies|keys[]' package.json)" ./build/src/index.js --outfile ./dist/bundle.js
+    - cp -a ./src/views ./dist/
     sources:
     - src/**/*.js
     generates:
@@ -19,8 +20,19 @@ tasks:
     deps: [build]
     cmds:
     - |
-      __project_root={{.ROOT_DIR}}
-      docker_dir=$__project_root/deployment/docker
-      cp -a dist/bundle.js $docker_dir/
-      cp $__project_root/package.json $__project_root/package-lock.json $docker_dir/
-      docker build -t nodejs-oidc-skeleton $docker_dir
+      docker_dir=./deployment/docker
+      cp -a dist/bundle.js dist/views $docker_dir/
+      cp ./package.json ./package-lock.json $docker_dir/
+      docker build -t {{.APP_NAME}} $docker_dir
+    sources:
+      - dist/**
+    generates:
+      - ./deployment/docker
+  aws-tag-push-to-ecr:
+    cmds:
+    - |
+      . ${HOME}/.my-aws-config
+      aws ecr get-login-password --profile $AWS_PROFILE --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+      # aws --profile $AWS_PROFILE ecr create-repository --registry-id ${AWS_ACCOUNT_ID} --repository-name {{.APP_NAME}}
+      docker tag {{.APP_NAME}} ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/{{.APP_NAME}}
+      docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/{{.APP_NAME}}
