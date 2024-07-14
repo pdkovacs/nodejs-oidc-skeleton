@@ -1,3 +1,8 @@
 [*.{js,ts,tsx,json,tf}]
 indent_style = tab
 indent_size = 2
+
+[*.{pug}]
+indent_style = space
+indent_size = 2
+

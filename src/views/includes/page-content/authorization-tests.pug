@@ -1,8 +1,6 @@
-extends ../../layout.pug
+extends ../../page.pug
 
 block content
-  header.header
-    h1.p-4 Test authorization
   section.main.px-5
     div.row
       div.col
@@ -18,4 +16,4 @@ block content
               input.form-control(name="buddy", placeholder='To whom?', autofocus='')
             div.col.py-3.align-item-center
               span#hello-to-other-output
-  include includes/../../footer-and-scripts
+

@@ -37,11 +37,17 @@ const setupPage = (router: express.Router): void => {
 		const logger = getLogger("route:///");
 		if (isNil(req.session.authentication)) {
 			logger.debug("rendering 'unauth'...");
-			res.render("unauth");
+			res.render("unauth", {
+				user: {},
+				view: {
+					title: ""
+				}
+			});
 			return;
 		}
 		logger.debug("rendering 'index'...");
 		res.render("index", {
+			view: {},
 			user: {
 				name: req.session.authentication?.username
 			}
@@ -108,10 +114,12 @@ const setupRoutes = (router: express.Router): void => {
 	router.get("/authorization-tests", (req, res) => {
 		const template = pug.compileFile(path.join(appdir, "views/includes/page-content/authorization-tests.pug"));
 		const markup = template({
-			user:
-				{
-					name: req.session.authentication?.username
-				}
+			view: {
+				title: "Test authorization"
+			},
+			user: {
+				name: req.session.authentication?.username
+			}
 		});
 		res.send(markup);
 	});
