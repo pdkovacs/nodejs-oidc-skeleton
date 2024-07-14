@@ -13,15 +13,20 @@ type EndPoint2RegExpMap = Readonly<Record<string, RegExp>>;
 type RequiredPrivilegesGetter = (url: string, requestMethod: string) => Promise<Privilege[]>;
 
 const requiredPrivilegesByEndPoints: RequiredPrivilegesByEndPoints = Object.freeze({
-	"^/hello([?].*)?$": {
+	"^/authorization-tests/hello([?].*)?$": {
 		POST: [
 			Privilege.SAY_HELLO
 		]
 	},
-	"^/hello/other$": {
+	"^/authorization-tests/hello/other$": {
 		POST: [
 			Privilege.SAY_HELLO,
 			Privilege.SAY_HELLO_TO_USER
+		]
+	},
+	"^/memory-consumption-increase-tests.*": {
+		POST: [
+			Privilege.DO_MEMORY_INCREASE_TEST
 		]
 	}
 });

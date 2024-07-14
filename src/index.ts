@@ -13,6 +13,7 @@ import path from "node:path";
 import pug from "pug";
 import { setupCallbackRoute } from "./security/authentication/oidc-express.js";
 import { isNil } from "lodash-es";
+import { getCurrentlyUsedAmount, startConsuming, stopConsuming } from "./memory-consumer.js";
 
 const appdir = new URL(".", import.meta.url).pathname;
 
@@ -49,7 +50,8 @@ const setupPage = (router: express.Router): void => {
 		res.render("index", {
 			view: {},
 			user: {
-				name: req.session.authentication?.username
+				name: req.session.authentication?.username,
+				privileges: req.session.authentication?.privileges
 			}
 		}
 		);
@@ -112,31 +114,77 @@ const setupAuthRoutes = async (router: express.Router, oidcHandler: OidcHandler,
 
 const setupRoutes = (router: express.Router): void => {
 	router.get("/authorization-tests", (req, res) => {
-		const template = pug.compileFile(path.join(appdir, "views/includes/page-content/authorization-tests.pug"));
+		const template = pug.compileFile(path.join(appdir, "views/includes/page-views/authorization-tests.pug"));
 		const markup = template({
 			view: {
 				title: "Test authorization"
 			},
 			user: {
-				name: req.session.authentication?.username
+				name: req.session.authentication?.username,
+				privileges: req.session.authentication?.privileges
 			}
 		});
 		res.send(markup);
 	});
 
-	router.post("/hello", (req, res) => {
-		const logger = getLogger("route:///login");
+	router.post("/authorization-tests/hello", (req, res) => {
+		const logger = getLogger("route:////authorization-tests/hello");
 		const name: string = req.query?.name as string;
 		logger.debug("incoming request: %s", name);
 		res.send(`Hello, ${name}`);
 	});
 
-	router.post("/hello/other", (req, res) => {
-		const logger = getLogger("route:///hello/other");
+	router.post("/authorization-tests/hello/other", (req, res) => {
+		const logger = getLogger("route:///authorization-tests/hello/other");
 		logger.debug("body: %o", req.body);
 		const name: string = req.body.buddy;
 		logger.debug("incoming request: %s", name);
 		res.send(`Hello, ${name}`);
+	});
+
+	router.get("/memory-consumption-increase-tests", (req, res) => {
+		const template = pug.compileFile(path.join(appdir, "views/includes/page-views/memory-consumption-increase-tests.pug"));
+		const markup = template({
+			view: {
+				title: "Test used memory increase"
+			},
+			user: {
+				name: req.session.authentication?.username,
+				privileges: req.session.authentication?.privileges
+			}
+		});
+		res.send(markup);
+	});
+
+	router.post("/memory-consumption-increase-tests/start", (req, res) => {
+		const logger = getLogger("route:///memory-consumption-increase-tests/start");
+		logger.debug("incoming request: req.body: %o", req.body);
+
+		const incrementInterval: number = parseInt(req.body?.increment_interval as string, 10);
+		logger.debug("incoming request: incrementInterval: %d", incrementInterval);
+		const incrementSize: number = parseInt(req.body?.increment_size as string, 10);
+		logger.debug("incoming request: incrementSize: %d", incrementSize);
+		startConsuming(incrementSize, incrementInterval);
+		res.end();
+	});
+
+	router.post("/memory-consumption-increase-tests/stop", (req, res) => {
+		const logger = getLogger("route:///memory-consumption-increase-tests/stop");
+		logger.debug("incoming request");
+		stopConsuming();
+	});
+
+	router.get("/memory-consumption-increase-tests/poll", (req, res) => {
+		const logger = getLogger("route:///memory-consumption-increase-tests/poll");
+		const currentlyUsedAmount = getCurrentlyUsedAmount();
+		logger.debug("currentlyUsedAmount: %d", currentlyUsedAmount);
+		if (currentlyUsedAmount < 0) {
+			res.sendStatus(286);
+		} else {
+			const template = pug.compileFile(path.join(appdir, "views/includes/current-memory-consumption.pug"));
+			const markup = template({ currentlyUsedAmount });
+			res.send(markup);
+		}
 	});
 };
 

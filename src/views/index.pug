@@ -4,3 +4,5 @@ block content
   div.toc
     div.d-flex.flex-column
       button.btn.btn-light(hx-get="/authorization-tests", hx-target="body" hx-push-url="true") Authorization tests
+      if user.privileges.includes("DO_MEMORY_INCREASE_TEST")
+        button.btn.mt-1.btn-light(hx-get="/memory-consumption-increase-tests", hx-target="body" hx-push-url="true") Memory increase tests

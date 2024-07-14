@@ -28,7 +28,10 @@ export const setupCallbackRoute = async (router: express.Router, loginUrl: strin
 					const userInfo = await oidcHandler.getUserInfo(tokenSet.access_token);
 					const claims = tokenSet.claims();
 					logger.debug("Got user-info and claims: %o", claims);
-					return await createAuthenticatedUser((userInfo.preferred_username ?? userInfo.email) as string, (userInfo.groups ?? claims["cognito:groups"]) as string[]);
+					return await createAuthenticatedUser(
+						(userInfo.preferred_username ?? userInfo.email) as string,
+						(userInfo.groups ?? claims["cognito:groups"]) as string[]
+					);
 				}
 			)
 			.then(
