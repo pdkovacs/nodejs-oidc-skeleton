@@ -1,7 +1,7 @@
 import { type Session } from "express-session";
-import _ from "lodash";
 import { type Privilege, privilegesByRoles } from "./authorization/privileges/roles-privileges.js";
 import { getLogger } from "../logger.js";
+import { isEmpty, isNil } from "lodash-es";
 
 declare module "express-session" {
 	export interface Session {
@@ -15,7 +15,7 @@ export const createAuthenticatedUser = async (username: string, roles: string[])
 	logger.debug("BEGIN");
 	const privileges: Privilege[] = roles.reduce<Privilege[]>(
 		(acc, role) => {
-			if (!_.isNil(privilegesByRoles[role])) {
+			if (!isNil(privilegesByRoles[role])) {
 				acc.push(...privilegesByRoles[role]);
 			}
 			return acc;
@@ -31,7 +31,7 @@ export class AuthenticatedUser {
 	public readonly privileges: Privilege[];
 
 	constructor (userName: string, privileges: Privilege[]) {
-		if (_.isEmpty(userName)) {
+		if (isEmpty(userName)) {
 			throw new Error(`Invalid username/login: ${userName}`);
 		}
 		this.username = userName;

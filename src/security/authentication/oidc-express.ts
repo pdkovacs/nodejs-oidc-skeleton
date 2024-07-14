@@ -1,6 +1,6 @@
 import type express from "express";
 import { getLogger } from "../../logger.js";
-import _ from "lodash";
+import { isNil } from "lodash-es";
 import { type OidcHandler } from "./oidc.js";
 import { createAuthenticatedUser, storeAuthentication } from "../authenticated-user.js";
 import { type Session } from "express-session";
@@ -11,7 +11,7 @@ export const setupCallbackRoute = async (router: express.Router, loginUrl: strin
 		const logger = getLogger("route:///oidc-callback");
 		logger.debug("BEGIN");
 		const codeVerifier = req.session?.codeVerifier;
-		if (_.isNil(codeVerifier)) {
+		if (isNil(codeVerifier)) {
 			logger.error("Missing code-verifier");
 			res.redirect(loginUrl);
 			return;
@@ -21,7 +21,7 @@ export const setupCallbackRoute = async (router: express.Router, loginUrl: strin
 			.then(
 				async tokenSet => {
 					logger.debug("Got some token-set");
-					if (_.isNil(tokenSet.access_token)) {
+					if (isNil(tokenSet.access_token)) {
 						logger.debug("no access_token in token-set");
 						throw new Error("no access_token in token-set");
 					}

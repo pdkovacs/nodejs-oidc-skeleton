@@ -3,21 +3,18 @@ import { getLogger, setDefaultLogLevel } from "./logger.js";
 
 import express from "express";
 
-import { type Logger } from "winston";
 import { type AddressInfo } from "node:net";
 import helmet from "helmet";
 import { type AppConfig, readConfiguration } from "./configuration.js";
 import { type OidcHandler, createOidcHandler } from "./security/authentication/oidc.js";
 import session from "express-session";
-import _ from "lodash";
 import { hasRequiredPrivileges } from "./security/authorization/privileges/priv-enforcement.js";
 import path from "node:path";
 import pug from "pug";
 import { setupCallbackRoute } from "./security/authentication/oidc-express.js";
+import { isNil } from "lodash-es";
 
 const appdir = new URL(".", import.meta.url).pathname;
-
-let logger: Logger;
 
 interface AppServer {
 	readonly address: () => AddressInfo
@@ -28,7 +25,7 @@ const logServerStart = (server: AppServer): void => {
 	const host = (server.address()).address;
 	const port = (server.address()).port;
 
-	logger.log("info", "The server is listening at http://%s:%s", host, port);
+	getLogger("logServerStart").info("The server is listening at http://%s:%s", host, port);
 };
 
 const setupPage = (router: express.Router): void => {
@@ -38,7 +35,7 @@ const setupPage = (router: express.Router): void => {
 
 	router.get("/", (req, res) => {
 		const logger = getLogger("route:///");
-		if (_.isNil(req.session.authentication)) {
+		if (isNil(req.session.authentication)) {
 			logger.debug("rendering 'unauth'...");
 			res.render("unauth");
 			return;
@@ -71,7 +68,7 @@ const setupAuthRoutes = async (router: express.Router, oidcHandler: OidcHandler,
 		const logger = getLogger("oidc://authentication-check");
 		const authentication = req.session.authentication;
 		logger.debug("checking authentication: %o", authentication);
-		if (_.isNil(authentication)) {
+		if (isNil(authentication)) {
 			res.redirect(loginUrl);
 			return;
 		}
@@ -97,7 +94,7 @@ const setupAuthRoutes = async (router: express.Router, oidcHandler: OidcHandler,
 		const logger = getLogger("route:///logout");
 		try {
 			delete req.session.authentication;
-			if (!_.isNil(logoutUrl)) {
+			if (!isNil(logoutUrl)) {
 				res.setHeader("HX-Redirect", logoutUrl).end();
 			}
 		} catch (error) {
@@ -137,7 +134,7 @@ const setupRoutes = (router: express.Router): void => {
 
 const startServer = async (appConfig: AppConfig): Promise<AppServer> => {
 	setDefaultLogLevel("debug");
-	logger = getLogger("app");
+	const logger = getLogger("app");
 
 	const app = express();
 	app.use(express.static(path.join(appdir, "views/assets")));
@@ -209,5 +206,6 @@ readConfiguration()
 		server => { logServerStart(server); }
 	)
 	.catch(error => {
+		const logger = getLogger("readConfiguration");
 		logger.error("things seem to have taken a bad turn: %o", error);
 	});

@@ -1,5 +1,5 @@
+import { isNil } from "lodash-es";
 import winston from "winston";
-import _ from "lodash";
 
 export type LoggerFactory = (label: string) => winston.Logger;
 export type LogLevel = "info" | "error" | "debug" | "warn";
@@ -13,7 +13,7 @@ const loggers: Loggers = {};
 export const getLogger = (label: string): winston.Logger => {
 	const cached = loggers[label];
 
-	if (!_.isNil(cached)) {
+	if (!isNil(cached)) {
 		return cached;
 	} else {
 		const logger = winston.createLogger({
@@ -38,7 +38,7 @@ export const setDefaultLogLevel = (logLevel: LogLevel): void => {
 export const updateDefaultLogLevel = (logLevel: LogLevel): void => {
 	defaultLogLevel = logLevel;
 	for (const logger of Object.values(loggers)) {
-		if (_.isNil(logger)) {
+		if (isNil(logger)) {
 			return;
 		}
 		logger.level = logLevel;

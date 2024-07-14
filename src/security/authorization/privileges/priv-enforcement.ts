@@ -1,7 +1,7 @@
 import type * as express from "express";
 import { Privilege } from "./roles-privileges.js";
-import _ from "lodash";
 import { getAuthentication } from "../../authenticated-user.js";
+import { intersection, isNil } from "lodash-es";
 
 type PathSelector = string;
 type RoleName = string;
@@ -51,6 +51,6 @@ export const hasRequiredPrivileges = async (req: express.Request): Promise<boole
 		return true;
 	}
 	const authentication = getAuthentication(req.session);
-	return !_.isNil(authentication) &&
-    _.intersection(requiredPrivileges, authentication.privileges).length >= requiredPrivileges.length;
+	return !isNil(authentication) &&
+    intersection(requiredPrivileges, authentication.privileges).length >= requiredPrivileges.length;
 };
