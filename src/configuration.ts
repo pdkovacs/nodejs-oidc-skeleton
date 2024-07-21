@@ -1,14 +1,18 @@
 import { isNil } from "lodash-es";
 
+const KEYCLOAK_URL = isNil(process.env.KEYCLOAK_URL)
+	? "http://keycloak.local.com"
+	: process.env.KEYCLOAK_URL;
+
 const defaults = {
 	serverPort: 8080,
 	serverHost: "127.0.0.1",
 	logLevel: "debug",
-	oidcTokenIssuer: "http://keycloak:8080/realms/my-realm",
+	oidcTokenIssuer: `${KEYCLOAK_URL}/realms/my-realm`,
 	oidcClientId: "node-skeleton",
 	oidcClientSecret: "xxxxx",
 	oidcCallbackUrl: "http://127.0.0.1:8080/oidc-callback",
-	oidcLogoutUrl: "http://keycloak:8080/realms/my-realm/protocol/openid-connect/logout"
+	oidcLogoutUrl: `${KEYCLOAK_URL}/realms/my-realm/protocol/openid-connect/logout`
 };
 
 export type AppConfig = typeof defaults;

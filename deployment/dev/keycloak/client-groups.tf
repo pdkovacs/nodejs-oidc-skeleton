@@ -1,5 +1,5 @@
 locals {
-  keycloak_url = "http://keycloak:8080"
+  keycloak_url = var.keycloak_url
   client_id    = "node-skeleton"
   client_name  = "NodeJS OIDC Skeleton"
   groups = [ "USERS", "PRIVILEGED_USERS" ]
@@ -9,7 +9,7 @@ terraform {
   required_providers {
     keycloak = {
       source = "mrparkers/keycloak"
-      version = "4.2.0"
+      version = "4.4.0"
     }
   }
 }
@@ -54,6 +54,11 @@ resource "keycloak_group" "node_oidc_skeleton" {
   count    = length(local.groups)
   realm_id = data.keycloak_realm.realm.id
   name     = local.groups[count.index]
+}
+
+variable "keycloak_url" {
+  type = string
+  default = "http://keycloak:8080"
 }
 
 variable "tf_client_secret" {

@@ -5,7 +5,7 @@ vars:
   APP_VERSION: 0.0.1
 
 tasks:
-  apply-keycloak-config:
+  keycloak-config:
     cmds:
     - cd ./deployment/dev/keycloak/ && ./tf.sh apply
   destroy-keycloak-config:
