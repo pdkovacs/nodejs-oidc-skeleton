@@ -114,7 +114,7 @@ const setupAuthRoutes = async (router: express.Router, oidcHandler: OidcHandler,
 
 const setupRoutes = (router: express.Router): void => {
 	router.get("/authorization-tests", (req, res) => {
-		const template = pug.compileFile(path.join(appdir, "views/includes/page-views/authorization-tests.pug"));
+		const template = pug.compileFile(path.join(appdir, "views/includes/authorization-tests/index.pug"));
 		const markup = template({
 			view: {
 				title: "Test authorization"
@@ -143,7 +143,7 @@ const setupRoutes = (router: express.Router): void => {
 	});
 
 	router.get("/memory-consumption-increase-tests", (req, res) => {
-		const template = pug.compileFile(path.join(appdir, "views/includes/page-views/memory-consumption-increase-tests.pug"));
+		const template = pug.compileFile(path.join(appdir, "views/includes/test-memory-consumption-increase/stopped.pug"));
 		const markup = template({
 			view: {
 				title: "Test used memory increase"
@@ -157,7 +157,7 @@ const setupRoutes = (router: express.Router): void => {
 	});
 
 	router.post("/memory-consumption-increase-tests/start", (req, res) => {
-		const logger = getLogger("route:///memory-consumption-increase-tests/start");
+		const logger = getLogger("route:///test-memory-consumption-increase/start");
 		logger.debug("incoming request: req.body: %o", req.body);
 
 		const incrementInterval: number = parseInt(req.body?.increment_interval as string, 10);
@@ -165,13 +165,17 @@ const setupRoutes = (router: express.Router): void => {
 		const incrementSize: number = parseInt(req.body?.increment_size as string, 10);
 		logger.debug("incoming request: incrementSize: %d", incrementSize);
 		startConsuming(incrementSize, incrementInterval);
-		res.end();
+		const template = pug.compileFile(path.join(appdir, "/views/includes/test-memory-consumption-increase/in-progress.pug"));
+		res.send(template());
 	});
 
 	router.post("/memory-consumption-increase-tests/stop", (req, res) => {
 		const logger = getLogger("route:///memory-consumption-increase-tests/stop");
 		logger.debug("incoming request");
 		stopConsuming();
+		res.send({
+			memoryIncreaseInProgress: true
+		});
 	});
 
 	router.get("/memory-consumption-increase-tests/poll", (req, res) => {
@@ -181,7 +185,7 @@ const setupRoutes = (router: express.Router): void => {
 		if (currentlyUsedAmount < 0) {
 			res.sendStatus(286);
 		} else {
-			const template = pug.compileFile(path.join(appdir, "views/includes/current-memory-consumption.pug"));
+			const template = pug.compileFile(path.join(appdir, "views/includes/test-memory-consumption-increase/current-memory-consumption.pug"));
 			const markup = template({ currentlyUsedAmount });
 			res.send(markup);
 		}

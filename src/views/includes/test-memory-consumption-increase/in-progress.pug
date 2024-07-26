@@ -1,0 +1,11 @@
+button.btn.btn-outline-secondary(
+	type="button"
+	hx-post="/memory-consumption-increase-tests/stop"
+) Stop consuming backend memory
+div#progress-poller(
+  hx-swap-oob="true"
+)
+  div(
+    hx-get="/memory-consumption-increase-tests/poll"
+    hx-trigger="every 2s"
+	)
