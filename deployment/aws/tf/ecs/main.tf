@@ -6,7 +6,7 @@ data "aws_vpc" "main" {
 }
 
 data "aws_cognito_user_pools" "pool" {
-	name = "nodejs-oidc-skeleton"
+	name = "nodejs-oidc-boilerplate"
 }
 
 data "aws_cognito_user_pool_clients" "clients" {
@@ -22,7 +22,7 @@ data "aws_secretsmanager_secret_version" "client_secret_version" {
 }
 
 data "aws_ssm_parameter" "callback_url" {
-  name  = "/config/noidcske/callback-url"
+  name  = "/config/nodejs-oidc-boilerplate/callback-url"
 }
 
 data "aws_lb_target_group" "private" {
@@ -54,7 +54,7 @@ resource "aws_ecs_task_definition" "test" {
   container_definitions = jsonencode([
     {
       name      = "test-container"
-      image     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.eu-west-1.amazonaws.com/nodejs-oidc-skeleton:${var.app_version}"
+      image     = "${data.aws_caller_identity.current.account_id}.dkr.ecr.eu-west-1.amazonaws.com/nodejs-oidc-boilerplate:${var.app_version}"
       cpu       = 256
       memory    = 512
       portMappings = [
@@ -64,15 +64,15 @@ resource "aws_ecs_task_definition" "test" {
         }
       ]
       environment = [
-        { name = "NOIDCSKE_SERVER_HOST",   value = "0.0.0.0" },
-        { name = "NOIDCSKE_SERVER_PORT",   value = "8080" },
-        { name = "NOIDCSKE_TOKEN_ISSUER",  value = "https://cognito-idp.eu-west-1.amazonaws.com/${data.aws_cognito_user_pools.pool.ids[0]}" },
-        { name = "NOIDCSKE_CLIENT_ID",     value = data.aws_cognito_user_pool_clients.clients.client_ids[0] },
-        { name = "NOIDCSKE_CALLBACK_URL",  value = data.aws_ssm_parameter.callback_url.value },
-        { name = "NOIDCSKE_LOGOUT_URL",    value = "" }
+        { name = "NODE_OIDC_BPLATE_SERVER_HOST",   value = "0.0.0.0" },
+        { name = "NODE_OIDC_BPLATE_SERVER_PORT",   value = "8080" },
+        { name = "NODE_OIDC_BPLATE_TOKEN_ISSUER",  value = "https://cognito-idp.eu-west-1.amazonaws.com/${data.aws_cognito_user_pools.pool.ids[0]}" },
+        { name = "NODE_OIDC_BPLATE_CLIENT_ID",     value = data.aws_cognito_user_pool_clients.clients.client_ids[0] },
+        { name = "NODE_OIDC_BPLATE_CALLBACK_URL",  value = data.aws_ssm_parameter.callback_url.value },
+        { name = "NODE_OIDC_BPLATE_LOGOUT_URL",    value = "" }
       ]
 			secrets: [{
-      	name: "NOIDCSKE_CLIENT_SECRET",
+      	name: "NODE_OIDC_BPLATE_CLIENT_SECRET",
       	valueFrom: data.aws_secretsmanager_secret_version.client_secret_version.arn
     	}]
       task_role_arn = aws_iam_role.ecs_task.arn
@@ -80,9 +80,9 @@ resource "aws_ecs_task_definition" "test" {
           "logDriver": "awslogs",
           "options": {
               "awslogs-create-group": "true",
-              "awslogs-group": "nodjes-skeleton-ecs",
+              "awslogs-group": "nodjes-boilerplate-ecs",
               "awslogs-region": "eu-west-1",
-              "awslogs-stream-prefix": "nodjes-skeleton"
+              "awslogs-stream-prefix": "nodjes-boilerplate"
           }
       }
     },
@@ -93,11 +93,11 @@ resource "aws_ecs_task_definition" "test" {
 }
 
 resource "aws_ecs_cluster" "test" {
-  name = "nodjes-skeleton"
+  name = "nodjes-boilerplate"
 }
 
 resource "aws_security_group" "test_service" {
-  name = "nodjes-skeleton"
+  name = "nodjes-boilerplate"
   vpc_id = data.aws_vpc.main.id
 
   ingress {

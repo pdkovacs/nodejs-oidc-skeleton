@@ -1,5 +1,5 @@
 
-resource "aws_cloudwatch_log_group" "nodjs_skeleton" {
+resource "aws_cloudwatch_log_group" "nodjs_boilerplate" {
   name = "apigw_private_integration_spike"
 }
 

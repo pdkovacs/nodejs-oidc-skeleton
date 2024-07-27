@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nodejs-oidc-boilerplate-backend
+  labels:
+    app: nodejs-oidc-boilerplate-backend
+spec:
+  selector:
+    app: nodejs-oidc-boilerplate-backend
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nodejs-oidc-boilerplate-backend
+  name: nodejs-oidc-boilerplate-backend
+  namespace: default
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: nodejs-oidc-boilerplate-backend
+  template:
+    metadata:
+      labels:
+        app: nodejs-oidc-boilerplate-backend
+    spec:
+      containers:
+      - image: nightmanager/nodejs-oidc-boilerplate-backend:0.0.1
+        imagePullPolicy: Always
+        name: nodejs-oidc-boilerplate-backend
+        env:
+        - name: LOG_LEVEL
+          value: debug
+        - name: NODE_OIDC_BPLATE_SERVER_HOST
+          value: 0.0.0.0
+        - name: NODE_OIDC_BPLATE_SERVER_PORT
+          value: "8080"
+        - name: NODE_OIDC_BPLATE_CLIENT_ID
+          value: "node-boilerplate"
+        - name: NODE_OIDC_BPLATE_CLIENT_SECRET 
+          valueFrom:
+           secretKeyRef:
+             name: nodejs-oidc-boilerplate-backend
+             key: NODEJS_OIDC_BOILERPLATE_CLIENT_SECRET
+        - name: NODE_OIDC_BPLATE_CALLBACK_URL
+          value: http://nodejs-oidc-boilerplate.local.com/oidc-callback
+        ports:
+        - name: http
+          containerPort: 8080
+        readinessProbe:
+          httpGet:
+            path: /app-info
+            port: 8080
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "100m"
+          limits:
+            memory: "2048Mi"
+            cpu: "500m"
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: secrets-volume
+          
+

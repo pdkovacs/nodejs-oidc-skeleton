@@ -1,7 +1,7 @@
 locals {
   keycloak_url = var.keycloak_url
-  client_id    = "node-skeleton"
-  client_name  = "NodeJS OIDC Skeleton"
+  client_id    = "node-boilerplate"
+  client_name  = "NodeJS OIDC boilerplate"
   groups = [ "USERS", "PRIVILEGED_USERS" ]
 }
 
@@ -24,7 +24,7 @@ data "keycloak_realm" "realm" {
     realm = "my-realm"
 }
 
-resource "keycloak_openid_client" "node_oidc_skeleton_client" {
+resource "keycloak_openid_client" "node_oidc_boilerplate_client" {
   realm_id            = data.keycloak_realm.realm.id
   client_id           = "${local.client_id}"
   client_secret       = "${var.client_secret}"
@@ -41,16 +41,16 @@ resource "keycloak_openid_client" "node_oidc_skeleton_client" {
   login_theme = "keycloak"
 }
 
-resource "keycloak_openid_group_membership_protocol_mapper" "node_oidc_skeleton_client_group_membership_mapper" {
+resource "keycloak_openid_group_membership_protocol_mapper" "node_oidc_boilerplate_client_group_membership_mapper" {
   realm_id  = data.keycloak_realm.realm.id
-  client_id = keycloak_openid_client.node_oidc_skeleton_client.id
+  client_id = keycloak_openid_client.node_oidc_boilerplate_client.id
   name      = "group-membership-mapper"
 
   claim_name = "groups"
   full_path = false
 }
 
-resource "keycloak_group" "node_oidc_skeleton" {
+resource "keycloak_group" "node_oidc_boilerplate" {
   count    = length(local.groups)
   realm_id = data.keycloak_realm.realm.id
   name     = local.groups[count.index]

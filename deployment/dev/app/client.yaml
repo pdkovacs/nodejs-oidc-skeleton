@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nodejs-oidc-boilerplate-client
+  labels:
+    app: nodejs-oidc-boilerplate-client
+spec:
+  selector:
+    app: nodejs-oidc-boilerplate-client
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nodejs-oidc-boilerplate-client
+  name: nodejs-oidc-boilerplate-client
+  namespace: default
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: nodejs-oidc-boilerplate-client
+  template:
+    metadata:
+      labels:
+        app: nodejs-oidc-boilerplate-client
+    spec:
+      containers:
+      - image: nightmanager/nodejs-oidc-boilerplate-client:0.0.1
+        imagePullPolicy: Always
+        name: nodejs-oidc-boilerplate-client
+        ports:
+        - name: http
+          containerPort: 8080
+        readinessProbe:
+          httpGet:
+            path: /index.html
+            port: 8080
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "50m"
+          limits:
+            memory: "1048Mi"
+            cpu: "100m"
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: config-volume
+          configMap:
+            name: nodejs-oidc-boilerplate-client
+        - name: client-config
+          
+

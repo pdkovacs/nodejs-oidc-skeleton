@@ -2,18 +2,19 @@
 
 tf_command=$1
 
-#MY_IP=$(ipconfig getifaddr en1)
-MY_IP=127.0.0.1
+#APP_HOSTNAME=$(ipconfig getifaddr en1)
+APP_HOSTNAME=nodejs-oidc-boilerplate.local.com
 
 . ~/.keycloak.secrets
 
-[ -f ~/.noidcske.secrets ] || echo "NOIDCSKE_CLIENT_SECRET=$(openssl rand -base64 32)" > ~/.noidcske.secrets
-. ~/.noidcske.secrets
+[ -f ~/.nodejs-oidc-boilerplate.secrets ] || echo "NODEJS_OIDC_BOILERPLATE_CLIENT_SECRET=$(openssl rand -base64 32)" > ~/.nodejs-oidc-boilerplate.secrets
+. ~/.nodejs-oidc-boilerplate.secrets
 
 # export TF_LOG=DEBUG
+echo ">>>>>>>> KEYCLOAK_URL: $KEYCLOAK_URL"
 terraform init &&
   terraform $tf_command -auto-approve \
     -var=keycloak_url=$KEYCLOAK_URL \
     -var="tf_client_secret=$KEYCLOAK_TF_CLIENT_SECRET" \
-    -var="client_secret=$NOIDCSKE_CLIENT_SECRET" \
-    -var="app_hostname=$MY_IP"
+    -var="client_secret=$NODEJS_OIDC_BOILERPLATE_CLIENT_SECRET" \
+    -var="app_hostname=$APP_HOSTNAME"

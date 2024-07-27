@@ -1,5 +1,5 @@
 resource "aws_cognito_user_pool" "pool" {
-  name                = "nodejs-oidc-skeleton"
+  name                = "nodejs-oidc-boilerplate"
 	username_attributes = ["email"]
 	email_configuration {
 		email_sending_account = "COGNITO_DEFAULT"
@@ -7,7 +7,7 @@ resource "aws_cognito_user_pool" "pool" {
 }
 
 resource "aws_cognito_user_pool_domain" "main" {
-  domain       = "nodejs-oidc-skeleton-mvudg7noyqu"
+  domain       = "nodejs-oidc-boilerplate-mvudg7noyqu"
   user_pool_id = aws_cognito_user_pool.pool.id
 }
 

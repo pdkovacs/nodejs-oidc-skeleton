@@ -1,37 +1,82 @@
 version: '3'
 
 vars:
-  APP_NAME: nodejs-oidc-skeleton
+  APP_NAME: nodejs-oidc-boilerplate
   APP_VERSION: 0.0.1
+  DOCKER_HUB_PREFIX: docker.io/nightmanager
+  DEV_REGISTRY: 192.168.0.175:5000
+  KEYCLOAK_URL: http://keycloak.local.com
 
 tasks:
   keycloak-config:
     cmds:
-    - cd ./deployment/dev/keycloak/ && ./tf.sh apply
-  destroy-keycloak-config:
+    - cd ./deployment/dev/keycloak/ && KEYCLOAK_URL={{.KEYCLOAK_URL}} ./tf.sh apply
+  keycloak-destroy-config:
     cmds:
-    - cd ./deployment/dev/keycloak/ && ./tf.sh destroy
-  build:
-    cmds:
-    - npm run compile
-    - bun build --target node --external="$(jq -r '.dependencies|keys[]' package.json)" ./build/src/index.js --outfile ./dist/bundle.js
-    - cp -a ./src/views ./dist/
-    sources:
-    - src/**/*
-    generates:
-    - dist/bundle.js
-  build-docker:
-    deps: [build]
+    - cd ./deployment/dev/keycloak/ && KEYCLOAK_URL={{.KEYCLOAK_URL}} ./tf.sh destroy
+  build-backend:
     cmds:
     - |
-      docker_dir=./deployment/docker
-      cp -a dist/bundle.js dist/views $docker_dir/
-      cp ./package.json ./package-lock.json $docker_dir/
-      docker build -t {{.APP_NAME}} $docker_dir
+      cd backend
+      npm run compile
+      bun build --target node --external="$(jq -r '.dependencies|keys[]' package.json)" ./build/index.js --outfile ./dist/bundle.js
     sources:
-      - dist/**
+    - backend/src/**/*
     generates:
-      - ./deployment/docker
+    - backend/dist/bundle.js
+  build-client:
+    cmds:
+    - |
+      cd client
+      npm run build
+    sources:
+    - client/src/**/*
+    generates:
+    - client/dist/**/*
+  docker-backend:
+    deps: [build-backend]
+    cmds:
+    - |
+      docker_dir=deployment/docker/backend
+      cp -a backend/dist/bundle.js $docker_dir/
+      cp ./backend/package.json ./backend/package-lock.json $docker_dir/
+      docker build -t {{.APP_NAME}}-backend $docker_dir
+  docker-client:
+    deps: [build-client]
+    cmds:
+    - |
+      docker_dir=deployment/docker/client
+      cp -a client/dist/index.html client/dist/assets $docker_dir/
+      cp ./client/package.json ./client/package-lock.json $docker_dir/
+      docker build -t {{.APP_NAME}}-client $docker_dir
+  # dev-registry-tag-push:
+  #   deps: [docker-all]
+  #   cmds:
+  #   - |
+  #     docker tag {{.APP_NAME}}-backend {{.DEV_REGISTRY}}/{{.APP_NAME}}-backend:{{.APP_VERSION}}
+  #     docker push {{.DEV_REGISTRY}}/{{.APP_NAME}}-backend:{{.APP_VERSION}}
+  #     docker tag {{.APP_NAME}}-cleint {{.DEV_REGISTRY}}/{{.APP_NAME}}-client:{{.APP_VERSION}}
+  #     docker push {{.DEV_REGISTRY}}/{{.APP_NAME}}-client:{{.APP_VERSION}}
+  docker-hub-tag-push:
+    deps: [docker-backend, docker-client]
+    cmds:
+    - |
+      docker tag {{.APP_NAME}}-backend {{.DOCKER_HUB_PREFIX}}/{{.APP_NAME}}-backend:{{.APP_VERSION}}
+      docker push {{.DOCKER_HUB_PREFIX}}/{{.APP_NAME}}-backend:{{.APP_VERSION}}
+      docker tag {{.APP_NAME}}-client {{.DOCKER_HUB_PREFIX}}/{{.APP_NAME}}-client:{{.APP_VERSION}}
+      docker push {{.DOCKER_HUB_PREFIX}}/{{.APP_NAME}}-client:{{.APP_VERSION}}
+  dev-deploy:
+    deps: [docker-hub-tag-push]
+    cmds:
+     - |
+      . ~/.nodejs-oidc-boilerplate.secrets
+      kubectl delete secret nodejs-oidc-boilerplate-backend 2>/dev/null || echo "Error while deleting secret 'nodejs-oidc-boilerplate-backend', probably didn't exist yet. Creating it..."
+      kubectl create secret generic nodejs-oidc-boilerplate-backend --from-literal=NODEJS_OIDC_BOILERPLATE_CLIENT_SECRET=$NODEJS_OIDC_BOILERPLATE_CLIENT_SECRET
+      kubectl delete pod $(kubectl get pod -l app=nodejs-oidc-boilerplate-backend -o jsonpath='{.items[0].metadata.name}')
+      
+      kubectl apply -f deployment/dev/app/backend.yaml
+      kubectl apply -f deployment/dev/app/client.yaml
+      kubectl apply -f deployment/dev/app/httpproxy.yaml
   aws-tag-push-to-ecr:
     deps: [build-docker]
     cmds:

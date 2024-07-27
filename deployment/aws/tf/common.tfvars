@@ -1,1 +1,1 @@
-vpc_name              = "nodejs-skeleton-apigw-private-integration"
+vpc_name              = "nodejs-boilerplate-apigw-private-integration"

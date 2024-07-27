@@ -1,0 +1,46 @@
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  name: content-delivery-ingress
+  namespace: default
+spec:
+  virtualhost:
+    fqdn: nodejs-oidc-boilerplate.local.com
+  routes:
+    - conditions:
+      - prefix: /api
+      enableWebsockets: true
+      services:
+        - name: nodejs-oidc-boilerplate-backend
+          port: 8080
+      pathRewritePolicy:
+        replacePrefix:
+        - prefix: /api
+          replacement: /
+      cookieRewritePolicies: # We're not directing to REWRITE here actually, we're directing NOT to REWRITE
+      - name: mysession
+        pathRewrite:
+          value: /
+      timeoutPolicy:
+        response: 1h
+    - conditions:
+      - prefix: /oidc-callback
+      services:
+        - name: nodejs-oidc-boilerplate-backend
+          port: 8080
+    - conditions:
+      - prefix: /login
+      services:
+        - name: nodejs-oidc-boilerplate-backend
+          port: 8080
+    - conditions:
+      - prefix: /
+      services:
+        - name: nodejs-oidc-boilerplate-client
+          port: 8080
+      responseHeadersPolicy:
+        set:
+        - name: Content-Security-Policy
+          value: "default-src 'self'; script-src-elem 'self' unpkg.com; style-src 'self' 'unsafe-inline'"
+        - name: Strict-Transport-Security
+          value: max-age=31536000; includeSubDomains
